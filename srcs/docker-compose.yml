@@ -1,0 +1,73 @@
+version: "3"
+
+services:
+
+  mariadb:
+    container_name: mariadb
+    image: mariadb:2003
+    build:
+      context: ./requirements/mariadb
+      args:
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+        WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+        MYSQL_USER: ${MYSQL_USER}
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        MYSQL_ROOT_USER: ${MYSQL_ROOT_USER}
+    volumes:
+    - mariadb_vol:/var/lib/mysql
+    restart: on-failure
+    env_file:
+      - .env
+    networks:
+      - my_network
+
+  wordpress:
+    container_name: wordpress 
+    build:
+      context: ./requirements/wordpress
+    image: wordpress:2003
+    volumes:
+      - wp_vol:/var/www/html/wordpress
+    env_file:
+      - .env
+    depends_on:
+      - mariadb
+    restart: on-failure
+    networks:
+      - my_network
+
+  nginx:
+    container_name: nginx
+    image: nginx:2003
+    build:
+      context: ./requirements/nginx
+    ports: 
+      - "443:443"
+    env_file:
+      - .env
+    restart: on-failure
+    networks:
+      - my_network
+    volumes:
+      - wp_vol:/var/www/html/wordpress
+    depends_on:
+      - wordpress
+
+
+networks:
+  my_network:
+    driver: bridge
+
+volumes:
+  mariadb_vol:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/data/mariadb
+  wp_vol:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/data/wordpress
